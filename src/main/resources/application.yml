@@ -1,0 +1,12 @@
+kafka:
+  configuration:
+    bootstrapServers: localhost:9092
+spring:
+  application:
+    name: RecomendationService
+  #profiles:
+    #active: dev
+recomendations:
+  max: 
+    per:
+      user: 3
