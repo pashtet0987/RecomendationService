@@ -4,9 +4,11 @@ kafka:
 spring:
   application:
     name: RecomendationService
-  #profiles:
-    #active: dev
+  profiles:
+    active: test
 recomendations:
   max: 
     per:
       user: 3
+server:
+  port: 8001

@@ -28,6 +28,7 @@ public class KafkaRecomendationListener {
     @KafkaHandler
     public void updateRecomendations(RecomendationDTO record, Acknowledgment ack){
         recomendationService.updateRecomendationsForUser(record);
+        ack.acknowledge();
         
     }
 }

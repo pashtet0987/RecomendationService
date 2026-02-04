@@ -12,26 +12,27 @@ import jakarta.transaction.Transactional;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 @Service
-public class RecomendationServiceImpl implements RecomendationService{
-    
+@PropertySource("classpath:application.yml")
+public class RecomendationServiceImpl implements RecomendationService {
+
     private RecomendationRepository recomendationRepository;
     private RecomendationMapper recomendationMapper;
     private int amount;
-    
 
     @Autowired
-    public RecomendationServiceImpl(RecomendationRepository recomendationRepository, RecomendationMapper recomendationMapper, @Value("${recomendations.max.per.user}") int amount) {
+    public RecomendationServiceImpl(RecomendationRepository recomendationRepository, RecomendationMapper recomendationMapper, @Value("${recomendations.max.per.user:3}") int amount) {
         this.recomendationRepository = recomendationRepository;
         this.recomendationMapper = recomendationMapper;
         this.amount = amount;
     }
-    
+
     @Override
     @Transactional
-    public List<RecomendationDTO> findByUserIdSortById(long userId){
+    public List<RecomendationDTO> findByUserIdSortById(long userId) {
         return recomendationRepository.findAllByUserIdSortById(userId).stream().map(recomendationMapper::entityToDTO).toList();
     }
 
@@ -39,22 +40,22 @@ public class RecomendationServiceImpl implements RecomendationService{
     @Transactional
     public void updateRecomendationsForUser(RecomendationDTO recomendationDTO) {
         List<RecomendationEntity> recomendationsByUser = recomendationRepository.findAllByUserIdSortById(recomendationDTO.getUserId());
-        if(recomendationsByUser.size() > amount){
+        if (recomendationsByUser.size() > amount) {
+            recomendationsByUser.stream().skip(amount).forEach((rec) -> recomendationRepository.delete(rec));
             recomendationsByUser = recomendationsByUser.stream().limit(3).toList();
         }
-        
-        if(recomendationsByUser.size() == amount) {
-            for(int i = amount - 2; i >= 0; i--) {
-                RecomendationEntity entity = recomendationsByUser.get(i + 1);
-                entity.setCategory(recomendationsByUser.get(i).getCategory());
+        if (recomendationsByUser.stream().filter(rec -> rec.getCategory().equals(recomendationDTO.getCategory())).count() == 0) {
+            if (recomendationsByUser.size() == amount) {
+                for (int i = amount - 2; i >= 0; i--) {
+                    RecomendationEntity entity = recomendationsByUser.get(i + 1);
+                    entity.setCategory(recomendationsByUser.get(i).getCategory());
+                }
+                recomendationsByUser.get(0).setCategory(recomendationDTO.getCategory());
+            } else {
+                recomendationsByUser.add(recomendationMapper.dtoToEntity(recomendationDTO));
             }
-            recomendationsByUser.get(0).setCategory(recomendationDTO.getCategory());
-        } else {
-            recomendationsByUser.add(recomendationMapper.dtoToEntity(recomendationDTO));
         }
-        
         recomendationRepository.saveAllAndFlush(recomendationsByUser);
     }
-    
-    
+
 }
